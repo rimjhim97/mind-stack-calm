@@ -2,8 +2,13 @@ import { useTimer } from "@/hooks/useTimer";
 import { Play, Pause, RotateCcw } from "lucide-react";
 
 const Index = () => {
-  const { mode, status, display, sessions, progress, start, pause, reset } = useTimer();
+  const {
+    mode, status, display, sessions, progress,
+    goal, setGoal, currentMotivation,
+    start, pause, reset,
+  } = useTimer();
   const isBreak = mode === "break";
+  const isIdle = status === "idle" && mode === "focus";
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
@@ -27,6 +32,19 @@ const Index = () => {
         </span>
       </div>
 
+      {/* Goal Input — shown only when idle before a focus session */}
+      {isIdle && (
+        <div className="mb-8 w-full max-w-xs animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          <input
+            type="text"
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+            placeholder="What is your focus goal for this session?"
+            className="w-full rounded-lg border border-border/50 bg-secondary/50 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors duration-200 focus:border-primary/40 focus:bg-secondary/80"
+          />
+        </div>
+      )}
+
       {/* Timer Ring */}
       <div
         className={`relative mb-12 flex h-64 w-64 items-center justify-center rounded-full border border-border/50 transition-all duration-500 ${
@@ -38,26 +56,15 @@ const Index = () => {
         }`}
         style={{ animationDelay: "0.2s" }}
       >
-        {/* Progress SVG */}
         <svg
           className="absolute inset-0 -rotate-90"
           viewBox="0 0 256 256"
           fill="none"
         >
+          <circle cx="128" cy="128" r="120" stroke="hsl(var(--border))" strokeWidth="2" />
           <circle
-            cx="128"
-            cy="128"
-            r="120"
-            stroke="hsl(var(--border))"
-            strokeWidth="2"
-          />
-          <circle
-            cx="128"
-            cy="128"
-            r="120"
-            stroke={
-              isBreak ? "hsl(var(--break-accent))" : "hsl(var(--primary))"
-            }
+            cx="128" cy="128" r="120"
+            stroke={isBreak ? "hsl(var(--break-accent))" : "hsl(var(--primary))"}
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray={2 * Math.PI * 120}
@@ -65,12 +72,27 @@ const Index = () => {
             className="transition-all duration-1000 ease-linear"
           />
         </svg>
-
-        {/* Time Display */}
         <span className="font-mono-timer text-6xl font-light tracking-tight text-foreground">
           {display}
         </span>
       </div>
+
+      {/* Motivational line during focus */}
+      {mode === "focus" && status !== "idle" && currentMotivation && (
+        <p className="mb-8 max-w-sm text-center text-sm leading-relaxed text-muted-foreground animate-fade-in">
+          {currentMotivation}
+        </p>
+      )}
+
+      {/* Break screen */}
+      {isBreak && (
+        <div className="mb-8 text-center animate-fade-in">
+          <p className="mb-2 text-2xl tracking-wide">💧 🧘 🌿</p>
+          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+            Take a water break. Hydrate. Reset. You earned this.
+          </p>
+        </div>
+      )}
 
       {/* Controls */}
       <div
@@ -98,7 +120,6 @@ const Index = () => {
             <Play className="h-5 w-5 ml-0.5" />
           </button>
         )}
-
         <button
           onClick={reset}
           className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-secondary hover:text-foreground hover:scale-105 active:scale-95"

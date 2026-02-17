@@ -6,12 +6,43 @@ const BREAK_DURATION = 5 * 60;
 type TimerMode = "focus" | "break";
 type TimerStatus = "idle" | "running" | "paused";
 
+const MOTIVATIONAL_TEMPLATES = [
+  "Stay locked in. Completing {goal} moves you closer to placement day.",
+  "Every minute on {goal} is an investment in your future career.",
+  "Champions don't quit. Keep pushing through {goal}.",
+  "Your competitors are resting. You're crushing {goal}.",
+  "Deep focus on {goal} — this is what separates the top 1%.",
+  "The case won't crack itself. Stay sharp on {goal}.",
+  "Focus is your superpower. Channel it into {goal}.",
+  "One session at a time. {goal} is getting done.",
+  "This is your edge. Finish {goal} and own the room.",
+  "Discipline beats talent. Stay with {goal} — you've got this.",
+];
+
 export function useTimer() {
   const [mode, setMode] = useState<TimerMode>("focus");
   const [status, setStatus] = useState<TimerStatus>("idle");
   const [timeLeft, setTimeLeft] = useState(FOCUS_DURATION);
   const [sessions, setSessions] = useState(0);
+  const [goal, setGoal] = useState("");
+  const [currentMotivation, setCurrentMotivation] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const usedIndicesRef = useRef<Set<number>>(new Set());
+
+  const pickMotivation = useCallback((goalText: string) => {
+    const available = MOTIVATIONAL_TEMPLATES
+      .map((_, i) => i)
+      .filter((i) => !usedIndicesRef.current.has(i));
+
+    if (available.length === 0) {
+      usedIndicesRef.current.clear();
+      return pickMotivation(goalText);
+    }
+
+    const idx = available[Math.floor(Math.random() * available.length)];
+    usedIndicesRef.current.add(idx);
+    return MOTIVATIONAL_TEMPLATES[idx].replace("{goal}", goalText || "your goal");
+  }, []);
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -74,13 +105,21 @@ export function useTimer() {
     return clearTimer;
   }, [status, handleComplete, clearTimer]);
 
-  const start = useCallback(() => setStatus("running"), []);
+  const start = useCallback(() => {
+    if (mode === "focus" && status === "idle") {
+      setCurrentMotivation(pickMotivation(goal));
+    }
+    setStatus("running");
+  }, [mode, status, goal, pickMotivation]);
+
   const pause = useCallback(() => setStatus("paused"), []);
   const reset = useCallback(() => {
     clearTimer();
     setStatus("idle");
     setMode("focus");
     setTimeLeft(FOCUS_DURATION);
+    setGoal("");
+    setCurrentMotivation("");
   }, [clearTimer]);
 
   const minutes = Math.floor(timeLeft / 60);
@@ -89,5 +128,9 @@ export function useTimer() {
   const totalDuration = mode === "focus" ? FOCUS_DURATION : BREAK_DURATION;
   const progress = 1 - timeLeft / totalDuration;
 
-  return { mode, status, display, sessions, progress, start, pause, reset };
+  return {
+    mode, status, display, sessions, progress,
+    goal, setGoal, currentMotivation,
+    start, pause, reset,
+  };
 }
